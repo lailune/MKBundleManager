@@ -1,26 +1,5 @@
-﻿#!/usr/bin/env python
+#!/usr/bin/env python
 # coding=utf-8
-# by BinSys <binsys@163.com>
-
-# 支持 mtouch mtouch-64 mtouch.exe mandroid.exe 解包
-
-# Readme
-
-# 1. 将插件文件 MKBundleManager.py 放入 IDA Pro 的 plugins 目录
-# 2. 用IDA打开待分析文件，等待分析完毕(左下角状态栏的 AU: idel)
-# 3. IDA 菜单栏 点击 View -> Open subviews -> Bundled Assembly Manager
-# 4. 在 Bundled Assembly Manager 窗口中可见程序集列表
-# 5. 选择要修改的文件用右键菜单内 导出全部文件 或者 导出文件 命令导出到指定位置
-# 6. 文件修改完毕后用右键菜单内 替换文件 命令 替换修改后的文件
-# 7. 会在位于原程序所在目录内用原文件名+日期时间命名生成替换后的打包文件
-
-# Note:
-# 可能会存在问题，请看IDA的输出窗口获取详细出错信息
-# .Net 程序集的修改可用 替换文件Radate .NET Reflector + Reflexil 插件
-# 当修改后的文件被压缩后大于原始文件的压缩数据大小时无法替换，这时，请用Reflexil删除修改后的程序集的冗余IL指令，减少程序集大小
-
-
-
 
 MKBundleManager_VERSION = "1.2"
 
@@ -132,9 +111,9 @@ class MKBundleTool():
 		print("InputFileType:{}".format(filetype_t_map.get(self.InputFileType, None)))
 	
 	
-		if self.InputFileType != InputFileType_EXE and self.InputFileType != InputFileType_MachO:
-			print "Error,Input file type must is PE or MachO!"
-			return
+		#if self.InputFileType != InputFileType_EXE and self.InputFileType != InputFileType_MachO:
+		#	print "Error,Input file type must is PE or MachO!"
+		#	return
 		
 	
 	
@@ -218,7 +197,7 @@ class MKBundleTool():
 
 	def FindStringEA(self):
 		searchstr = str("mkbundle: Error %d decompressing data for %s\n")
-		searchstr2 = str("Error %d decompresing data for %s\n")
+		searchstr2 = str("Error %d decompressing data for %s\n")
 	
 		#Do not use default set up, we'll call setup().
 		s = idautils.Strings(default_setup = False)
@@ -228,12 +207,12 @@ class MKBundleTool():
 		#loop through strings
 		for i, v in enumerate(s):                
 			if not v:
-				#print("Failed to retrieve string at index {}".format(i))
+				print("Failed to retrieve string at index {}".format(i))
 				return -1
 			else:
-				#print("[{}] ea: {:#x} ; length: {}; type: {}; '{}'".format(i, v.ea,
-				#v.length, string_type_map.get(v.type, None), str(v)))
-				if str(v) == searchstr or str(v) == searchstr2:
+				print("[{}] ea: {:#x} ; length: {}; type: {}; '{}'".format(i, v.ea,
+				v.length, string_type_map.get(v.type, None), str(v)))
+				if str(v).find(searchstr) != -1:# or str(v) == searchstr2:
 					return v.ea
 	
 		return -1
@@ -428,8 +407,9 @@ class MKBundleTool():
 		compressedstream = StringIO.StringIO(Data)  
 		gziper = gzip.GzipFile(fileobj=compressedstream)    
 		data2 = gziper.read()   # 读取解压缩后数据
-
-		f = open(Path, 'wb')
+		print(Path)
+		#Path = r"%s"%Path
+		f = open(Path, 'wb') #need fix paths
 		f.write(data2)
 		f.close()
 
@@ -440,7 +420,7 @@ class MKBundleTool():
 		else:
 			extname = ""
 
-		newpath = '{}\\{}{}'.format(OutputDir, FileItem.FileName, extname)
+		newpath = r"{}\\{}{}".format(OutputDir, FileItem.FileName, extname)
 
 		if FileItem.IsCompressed == "Y":
 			FileDataCompressed = idc.GetManyBytes(FileItem.FileDataOffset,FileItem.FileCompressedSize)
@@ -615,13 +595,13 @@ class MKBundleTool():
 class ReplaceFileForm(Form):
 	def __init__(self,bundleFile,impFile):
 		Form.__init__(self,
-r"""BUTTON YES* 替换
-BUTTON CANCEL 取消
-请选择文件（文件压缩后数据大小必须小于替换前压缩后数据大小）
+r"""BUTTON YES* Replace
+BUTTON CANCEL Cancel
+Please select the file (data compressed file size must be smaller than the compressed data size before replacement)
 
 {FormChangeCb}
-<##选择被打包的文件:{bundleFile}>
-<##选择修改后的文件:{impFile}>
+<##Select the files to be packaged:{bundleFile}>
+<##Select the modified file:{impFile}>
 
 """.decode('utf-8').encode(sys.getfilesystemencoding()), {  'bundleFile': Form.FileInput(open=True,value=bundleFile),
 		'impFile': Form.FileInput(open=True,value=impFile),
@@ -648,13 +628,13 @@ BUTTON CANCEL 取消
 class SaveItemsToDirForm(Form):
 	def __init__(self,defaultpath):
 		Form.__init__(self,
-r"""BUTTON YES* 保存
-BUTTON CANCEL 取消
-请选择输出目录
+r"""BUTTON YES* Save
+BUTTON CANCEL Cancel
+Select the output directory
 
 {FormChangeCb}
 
-<##输出目录:{impFile}>
+<##Output directory:{impFile}>
 """.decode('utf-8').encode(sys.getfilesystemencoding()), {
 		'impFile': Form.DirInput(value=defaultpath),
 
@@ -723,13 +703,13 @@ class BundledAssemblyManagerView(Choose2):
 
 
 		if self.cmd_Items_SaveAs == None:
-			self.cmd_Items_SaveAs = self.AddCommand("导出全部文件...".decode('utf-8').encode(sys.getfilesystemencoding()), flags = idaapi.CHOOSER_POPUP_MENU | idaapi.CHOOSER_NO_SELECTION, icon=139)
+			self.cmd_Items_SaveAs = self.AddCommand("Export all files...".decode('utf-8').encode(sys.getfilesystemencoding()), flags = idaapi.CHOOSER_POPUP_MENU | idaapi.CHOOSER_NO_SELECTION, icon=139)
 		
 		if self.cmd_Item_SaveAs == None:
-			self.cmd_Item_SaveAs = self.AddCommand("导出文件...".decode('utf-8').encode(sys.getfilesystemencoding()), flags = idaapi.CHOOSER_POPUP_MENU, icon=139)
+			self.cmd_Item_SaveAs = self.AddCommand("Export the file...".decode('utf-8').encode(sys.getfilesystemencoding()), flags = idaapi.CHOOSER_POPUP_MENU, icon=139)
 		
 		if self.cmd_Item_ReplaceBy == None:
-			self.cmd_Item_ReplaceBy = self.AddCommand("替换文件...".decode('utf-8').encode(sys.getfilesystemencoding()), flags = idaapi.CHOOSER_POPUP_MENU, icon=139)
+			self.cmd_Item_ReplaceBy = self.AddCommand("Replace the file...".decode('utf-8').encode(sys.getfilesystemencoding()), flags = idaapi.CHOOSER_POPUP_MENU, icon=139)
 
 		return True
 
@@ -740,7 +720,7 @@ class BundledAssemblyManagerView(Choose2):
 		try:
 
 			#-1:cancel,0-no,1-ok
-			UseScreenEAInt = idc.AskYN(1,"是否自动获取数据位置?(否则使用ScreenEA)".decode('utf-8').encode(sys.getfilesystemencoding()))
+			UseScreenEAInt = idc.AskYN(1,"Is the data location automatically acquired? (Otherwise, ScreenEA is used)".decode('utf-8').encode(sys.getfilesystemencoding()))
 
 			if UseScreenEAInt == -1:
 				UseScreenEAInt = 1
