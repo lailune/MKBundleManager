@@ -4,7 +4,7 @@ MKBundleManager
 
 mono mkbundle unpacker and file replace tool.
 
-###Works with files packed by mtouch mtouch-64 mtouch.exe mandroid.exe 解包
+###Works with files packed by mtouch mtouch-64 mtouch.exe mandroid.exe
 
 ### Usage
 
